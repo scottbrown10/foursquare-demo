@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">FourSquare</string>
+    <string name="nearby_locations">Nearby Locations</string>
 </resources>
