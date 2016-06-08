@@ -29,40 +29,59 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
         mTips = new ArrayList<>();
 
         // TODO: 6/8/16 use gps for location if available
-        mFoursquareClient.getNearby(Constants.location);
+        mFoursquareClient.getNearby(Constants.LOCATION);
 
         mListView = (ListView) findViewById(R.id.location_list);
         tipAdapter = new TipAdapter(this, R.layout.location_cell_layout, mTips);
         mListView.setAdapter(tipAdapter);
     }
 
-    private void getTips() {
-        int length = mLocations.length();
-        for (int i = 0; i < length; i++) {
-            try {
-                JSONObject location = mLocations.getJSONObject(i);
-                String name = location.getString("name");
-                mFoursquareClient.getTip(name, i);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     @Override
-    public void onSearchResponse(JSONArray locations) {
+    public void onSearchResponse(JSONObject searchResponse) {
+        JSONArray locations = null;
+        try {
+            // extract needed attributes from response
+            locations = searchResponse.getJSONObject("response").getJSONArray("venues");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         mLocations = locations;
         getTips();
     }
 
     @Override
-    public void onTipResponse(String locationName, JSONObject jsonTip, int index) {
+    public void onTipResponse(String locationName, JSONObject tipResponse, int index) {
         try {
-            Tip tip = new Tip(locationName, jsonTip.getString("text"));
+            // extract needed attributes from response
+            JSONArray tips = tipResponse.getJSONObject("response").getJSONObject("tips").getJSONArray("items");
+            String body = null;
+            if (tips.length() == 0) {
+                body = getResources().getString(R.string.no_tip);
+            } else {
+                JSONObject jsonTip = tips.getJSONObject(0);
+                body = jsonTip.getString("text");
+            }
+
+            Tip tip = new Tip(locationName, body);
             mTips.add(tip);
             tipAdapter.notifyDataSetChanged();
         } catch (JSONException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void getTips() {
+        int length = mLocations.length();
+        for (int i = 0; i < length; i++) {
+            try {
+                // extract needed values from location objects
+                JSONObject location = mLocations.getJSONObject(i);
+                String name = location.getString("name");
+                String id = location.getString("id");
+                mFoursquareClient.getTip(name, id, i);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
     }
 

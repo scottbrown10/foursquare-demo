@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">FourSquare</string>
     <string name="nearby_locations">Nearby Locations</string>
+    <string name="no_tip">No tips for this location</string>
 </resources>

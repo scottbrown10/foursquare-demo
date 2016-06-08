@@ -1,19 +1,19 @@
 package com.example.scott.foursquare;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class FoursquareAPIClient {
+    public static final String TAG = "4SquareClient";
     private static FoursquareAPIClient mInstance;
     private static Context mContext;
     private RequestQueue mRequestQueue;
@@ -35,37 +35,43 @@ public class FoursquareAPIClient {
         return mInstance;
     }
 
-    public void getNearby(String location) {
-        JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, Constants.VENUES_SEARCH, null,
-                new Response.Listener<JSONArray>() {
+    public void getNearby(final String location) {
+        String searchURL = Constants.VENUES_SEARCH +
+                Constants.PARAM_LIMIT + Constants.LOCATION_LIMIT +
+                Constants.LAT_LONG_PARAM + location;
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, searchURL, null,
+                new Response.Listener<JSONObject>() {
 
                     @Override
-                    public void onResponse(JSONArray response) {
-                        ((FoursquareAPIListener)mContext).onSearchResponse(response);
+                    public void onResponse(JSONObject response) {
+                        ((FoursquareAPIListener) mContext).onSearchResponse(response);
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-
+                        Log.d(TAG, "onErrorResponse: " + error.toString());
                     }
                 });
-        mRequestQueue.add(jsonArrayRequest);
+        mRequestQueue.add(jsonObjectRequest);
     }
 
-    public void getTip(final String location, final int index) {
-        String url = Constants.VENUES_PATH + location + Constants.VENUES_TIPS;
+    public void getTip(final String name, final String locationID, final int index) {
+        String url = Constants.VENUES_PATH + "/" + locationID + Constants.VENUES_TIPS +
+                Constants.PARAM_LIMIT + Constants.TIP_LIMIT;
+
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url, null,
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        ((FoursquareAPIListener)mContext).onTipResponse(location, response, index);
+                        ((FoursquareAPIListener)mContext).onTipResponse(name, response, index);
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-
+                        Log.d(TAG, "onErrorResponse: " + error.toString());
                     }
                 }
         );
@@ -73,7 +79,7 @@ public class FoursquareAPIClient {
     }
 
     public interface FoursquareAPIListener {
-        void onSearchResponse(JSONArray locations);
-        void onTipResponse(String locationName, JSONObject tip, int index); // index is position of location if local array
+        void onSearchResponse(JSONObject searchResponse);
+        void onTipResponse(String locationName, JSONObject tipResponse, int index); // index is position of location if local array
     }
 }
