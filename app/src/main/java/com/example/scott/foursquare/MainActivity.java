@@ -28,7 +28,8 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
         mFoursquareClient = FoursquareAPIClient.getInstance(this);
         mTips = new ArrayList<>();
 
-        mFoursquareClient.getLocations();
+        // TODO: 6/8/16 use gps for location if available
+        mFoursquareClient.getNearby(Constants.location);
 
         mListView = (ListView) findViewById(R.id.location_list);
         tipAdapter = new TipAdapter(this, R.layout.location_cell_layout, mTips);

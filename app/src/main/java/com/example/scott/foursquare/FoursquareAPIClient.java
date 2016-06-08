@@ -35,7 +35,7 @@ public class FoursquareAPIClient {
         return mInstance;
     }
 
-    public void getLocations() {
+    public void getNearby(String location) {
         JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, Constants.VENUES_SEARCH, null,
                 new Response.Listener<JSONArray>() {
 
