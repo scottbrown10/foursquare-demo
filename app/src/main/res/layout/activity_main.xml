@@ -15,7 +15,8 @@
         android:layout_centerHorizontal="true"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:text="@string/nearby_locations"
-        android:id="@+id/title" />
+        android:id="@+id/title"
+        android:paddingBottom="10dp"/>
 
     <ListView
         android:layout_below="@id/title"

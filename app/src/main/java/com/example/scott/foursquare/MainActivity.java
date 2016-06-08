@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
             // extract needed attributes from response
             JSONArray tips = tipResponse.getJSONObject("response").getJSONObject("tips").getJSONArray("items");
             String body = null;
-            if (tips.length() == 0) {
+            if (tips.length() == 0) { // TODO: 6/8/16 Perhaps get another location? 
                 body = getResources().getString(R.string.no_tip);
             } else {
                 JSONObject jsonTip = tips.getJSONObject(0);
