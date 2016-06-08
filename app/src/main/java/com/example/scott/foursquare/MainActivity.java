@@ -99,7 +99,6 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
         }
     }
 
-
     private boolean isConnected() {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = cm.getActiveNetworkInfo();

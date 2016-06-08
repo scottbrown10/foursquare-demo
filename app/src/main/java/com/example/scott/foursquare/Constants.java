@@ -22,4 +22,6 @@ public class Constants {
 
     public static final String LOCATION = "38.86,-77.38"; // latitude and longitude
     public static final String LAT_LONG_PARAM = "&ll=";
+
+    public static final String SORT_PARAM = "&sort=recent";
 }

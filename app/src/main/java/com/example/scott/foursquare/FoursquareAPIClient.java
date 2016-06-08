@@ -45,7 +45,8 @@ public class FoursquareAPIClient {
     public void getNearby(final String location) {
         String searchURL = Constants.VENUES_SEARCH +
                 Constants.PARAM_LIMIT + Constants.LOCATION_LIMIT +
-                Constants.LAT_LONG_PARAM + location;
+                Constants.LAT_LONG_PARAM + location +
+                Constants.SORT_PARAM;
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, searchURL, null,
                 new Response.Listener<JSONObject>() {
