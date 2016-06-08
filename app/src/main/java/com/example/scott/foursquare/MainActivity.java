@@ -1,8 +1,15 @@
 package com.example.scott.foursquare;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.widget.Button;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import com.example.scott.foursquare.Adapters.TipAdapter;
 import com.example.scott.foursquare.Models.Tip;
@@ -13,27 +20,34 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity implements FoursquareAPIClient.FoursquareAPIListener {
+public class MainActivity extends AppCompatActivity implements FoursquareAPIClient.FoursquareAPIListener, View.OnClickListener {
     private JSONArray mLocations;
     private ArrayList<Tip> mTips;
     private TipAdapter tipAdapter;
-    FoursquareAPIClient mFoursquareClient;
-    ListView mListView;
+
+    private FoursquareAPIClient mFoursquareClient;
+    private ListView mListView;
+    private RelativeLayout mListLayout;
+    private Button mButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mFoursquareClient = FoursquareAPIClient.getInstance(this);
-        mTips = new ArrayList<>();
-
-        // TODO: 6/8/16 use gps for location if available
-        mFoursquareClient.getNearby(Constants.LOCATION);
-
         mListView = (ListView) findViewById(R.id.location_list);
+        mButton = (Button) findViewById(R.id.get_locations_button);
+        mListLayout = (RelativeLayout) findViewById(R.id.location_list_layout);
+
+        mTips = new ArrayList<>();
         tipAdapter = new TipAdapter(this, R.layout.location_cell_layout, mTips);
         mListView.setAdapter(tipAdapter);
+        mFoursquareClient = FoursquareAPIClient.getInstance(this);
+
+        if (isConnected()) {
+            getNearbyLocations();
+        } else {
+            mButton.setOnClickListener(this);
+        }
     }
 
     @Override
@@ -85,4 +99,26 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
         }
     }
 
+
+    private boolean isConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+        return (networkInfo != null && networkInfo.isConnected());
+    }
+
+    @Override
+    public void onClick(View v) {
+        // TODO: 6/8/16 use gps for location if available
+        if (isConnected()) {
+            getNearbyLocations();
+        } else {
+            Toast.makeText(MainActivity.this, "No active internet connection", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void getNearbyLocations() {
+        mFoursquareClient.getNearby(Constants.LOCATION);
+        mButton.setVisibility(View.GONE);
+        mListLayout.setVisibility(View.VISIBLE);
+    }
 }

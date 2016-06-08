@@ -2,4 +2,5 @@
     <string name="app_name">FourSquare</string>
     <string name="nearby_locations">Nearby Locations</string>
     <string name="no_tip">No tip for this location</string>
+    <string name="get_locations_button_text">Get Nearby Locations</string>
 </resources>
