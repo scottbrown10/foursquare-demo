@@ -73,7 +73,7 @@ public class FoursquareAPIClient {
                 new Response.Listener<JSONObject>() {
                     @Override
                     public void onResponse(JSONObject response) {
-                        ((FoursquareAPIListener)mContext).onTipResponse(name, response, index);
+                        ((FoursquareAPIListener)mContext).onTipResponse(response, index);
                     }
                 },
                 new Response.ErrorListener() {
@@ -88,6 +88,6 @@ public class FoursquareAPIClient {
 
     public interface FoursquareAPIListener {
         void onSearchResponse(JSONObject searchResponse);
-        void onTipResponse(String locationName, JSONObject tipResponse, int index); // index is position of location if local array
+        void onTipResponse(JSONObject tipResponse, int index); // index is position of location if local array
     }
 }

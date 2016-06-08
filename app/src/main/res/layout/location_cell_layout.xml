@@ -13,7 +13,7 @@
             android:paddingBottom="5dp"
             android:layout_gravity="center_horizontal"
             android:textAlignment="center"
-            android:hint="Somewhere"/>
+            android:hint="@string/location_cell_name_hint"/>
 
         <TextView
             android:layout_width="wrap_content"
@@ -23,6 +23,6 @@
             android:layout_gravity="center_horizontal"
             android:textAlignment="center"
             android:paddingBottom="5dp"
-            android:hint="Some Tip"/>
+            android:hint="@string/location_cell_tip_hint"/>
 
 </LinearLayout>

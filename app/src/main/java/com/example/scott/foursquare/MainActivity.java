@@ -64,21 +64,19 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
     }
 
     @Override
-    public void onTipResponse(String locationName, JSONObject tipResponse, int index) {
+    public void onTipResponse(JSONObject tipResponse, int index) {
         try {
             // extract needed attributes from response
             JSONArray tips = tipResponse.getJSONObject("response").getJSONObject("tips").getJSONArray("items");
-            String body = null;
-            if (tips.length() == 0) { // TODO: 6/8/16 Perhaps get another location? 
-                body = getResources().getString(R.string.no_tip);
-            } else {
+            String body;
+            // TODO: 6/8/16 Perhaps get another location if no tips for this one
+            if (tips.length() != 0) {
                 JSONObject jsonTip = tips.getJSONObject(0);
                 body = jsonTip.getString("text");
+                mTips.get(index).setBody(body);
+                tipAdapter.notifyDataSetChanged();
             }
 
-            Tip tip = new Tip(locationName, body);
-            mTips.add(tip);
-            tipAdapter.notifyDataSetChanged();
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -92,6 +90,10 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
                 JSONObject location = mLocations.getJSONObject(i);
                 String name = location.getString("name");
                 String id = location.getString("id");
+
+                Tip tip = new Tip(name, null);
+                mTips.add(tip);
+                tipAdapter.notifyDataSetChanged();
                 mFoursquareClient.getTip(name, id, i);
             } catch (JSONException e) {
                 e.printStackTrace();

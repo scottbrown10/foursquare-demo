@@ -23,8 +23,7 @@ public class TipAdapter extends ArrayAdapter<Tip> {
     }
 
     /*
-     *
-     * Overriding to show more than a single TextView for each tip
+     * Override to bind tipj to more than a single TextView
      */
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
