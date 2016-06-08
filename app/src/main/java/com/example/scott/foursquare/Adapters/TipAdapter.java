@@ -22,12 +22,17 @@ public class TipAdapter extends ArrayAdapter<Tip> {
         this.mTips = objects;
     }
 
+    /*
+     *
+     * Overriding to show more than a single TextView for each tip
+     */
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         if (convertView == null) {
             LayoutInflater layoutInflater = (LayoutInflater)mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             convertView = layoutInflater.inflate(R.layout.location_cell_layout, null);
         }
+
         TextView nameTV = (TextView) convertView.findViewById(R.id.location_name);
         TextView tipTV = (TextView) convertView.findViewById(R.id.location_tip);
         nameTV.setText(mTips.get(position).locationName);

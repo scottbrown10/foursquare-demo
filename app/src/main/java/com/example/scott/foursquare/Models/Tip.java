@@ -1,6 +1,7 @@
 package com.example.scott.foursquare.Models;
 
 public class Tip {
+
     public String locationName;
     public String body;
 

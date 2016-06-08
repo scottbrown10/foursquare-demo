@@ -1,5 +1,11 @@
 package com.example.scott.foursquare;
 
+/**
+ * Client to interact with Foursquare api.
+ * The user of this should implement its listener interface to obtain the responses.
+ * Responses are returned exactly as they come from the api.
+ */
+
 import android.content.Context;
 import android.util.Log;
 
@@ -19,7 +25,8 @@ public class FoursquareAPIClient {
     private RequestQueue mRequestQueue;
 
     private FoursquareAPIClient(Context context) {
-        /* associate singleton with Application rather than Activity
+        /*
+         * associate singleton with Application rather than Activity
          * so it lasts the lifetime of the application
          */
         assert (context instanceof FoursquareAPIListener);
