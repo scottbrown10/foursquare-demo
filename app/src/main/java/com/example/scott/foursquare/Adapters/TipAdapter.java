@@ -1,47 +1,50 @@
 package com.example.scott.foursquare.Adapters;
 
-import android.content.Context;
+import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import com.example.scott.foursquare.Models.Tip;
 import com.example.scott.foursquare.R;
 
-import java.util.List;
+import java.util.ArrayList;
 
-public class TipAdapter extends ArrayAdapter<Tip> {
-    public List<Tip> mTips;
-    public Context mContext;
+public class TipAdapter extends RecyclerView.Adapter<TipAdapter.ViewHolder> {
+    public ArrayList<Tip> mTips;
 
-    public TipAdapter(Context context, int resource, List<Tip> objects) {
-        super(context, resource, objects);
-        this.mContext = context;
-        this.mTips = objects;
-    }
-
-    /*
-     * Override to bind tipj to more than a single TextView
-     */
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        if (convertView == null) {
-            LayoutInflater layoutInflater = (LayoutInflater)mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            convertView = layoutInflater.inflate(R.layout.location_cell_layout, null);
-        }
-
-        TextView nameTV = (TextView) convertView.findViewById(R.id.location_name);
-        TextView tipTV = (TextView) convertView.findViewById(R.id.location_tip);
-        nameTV.setText(mTips.get(position).locationName);
-        tipTV.setText(mTips.get(position).body);
-        return convertView;
+    public TipAdapter(ArrayList<Tip> tips) {
+        this.mTips = tips;
     }
 
     @Override
-    public int getCount() {
+    public TipAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.location_cell_layout, parent, false);
+        ViewHolder vh = new ViewHolder(v);
+        return vh;
+    }
+
+    @Override
+    public void onBindViewHolder(TipAdapter.ViewHolder holder, int position) {
+        holder.mLocationName.setText(mTips.get(position).locationName);
+        holder.mLocationTip.setText(mTips.get(position).body);
+    }
+
+    @Override
+    public int getItemCount() {
         return mTips.size();
+    }
+
+    public class ViewHolder extends RecyclerView.ViewHolder {
+        public TextView mLocationName;
+        public TextView mLocationTip;
+
+        public ViewHolder(View itemView) {
+            super(itemView);
+            mLocationName = (TextView) itemView.findViewById(R.id.location_name);
+            mLocationTip = (TextView) itemView.findViewById(R.id.location_tip);
+        }
     }
 }
 

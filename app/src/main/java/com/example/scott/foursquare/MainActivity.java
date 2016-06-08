@@ -5,9 +5,10 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
@@ -22,11 +23,10 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements FoursquareAPIClient.FoursquareAPIListener, View.OnClickListener {
     private JSONArray mLocations;
-    private ArrayList<Tip> mTips;
     private TipAdapter tipAdapter;
+    private ArrayList<Tip> mTips;
 
     private FoursquareAPIClient mFoursquareClient;
-    private ListView mListView;
     private RelativeLayout mListLayout;
     private Button mButton;
 
@@ -34,18 +34,26 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mListView = (ListView) findViewById(R.id.location_list);
+        RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.location_list);
         mButton = (Button) findViewById(R.id.get_locations_button);
         mListLayout = (RelativeLayout) findViewById(R.id.location_list_layout);
 
+        mRecyclerView.setHasFixedSize(true);
+
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
+        mRecyclerView.setLayoutManager(layoutManager);
+
         mTips = new ArrayList<>();
-        tipAdapter = new TipAdapter(this, R.layout.location_cell_layout, mTips);
-        mListView.setAdapter(tipAdapter);
+        tipAdapter = new TipAdapter(mTips);
+        mRecyclerView.setAdapter(tipAdapter);
+
         mFoursquareClient = FoursquareAPIClient.getInstance(this);
 
         if (isConnected()) {
             getNearbyLocations();
         } else {
+            mButton.setVisibility(View.VISIBLE);
+            mListLayout.setVisibility(View.GONE);
             mButton.setOnClickListener(this);
         }
     }
@@ -118,7 +126,9 @@ public class MainActivity extends AppCompatActivity implements FoursquareAPIClie
     }
 
     private void getNearbyLocations() {
+        mTips.clear();
         mFoursquareClient.getNearby(Constants.LOCATION);
+
         mButton.setVisibility(View.GONE);
         mListLayout.setVisibility(View.VISIBLE);
     }
