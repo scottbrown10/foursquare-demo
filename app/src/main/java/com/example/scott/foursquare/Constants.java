@@ -20,7 +20,7 @@ public class Constants {
     public static final int LOCATION_LIMIT = 10;
     public static final int TIP_LIMIT = 1;
 
-    public static final String LOCATION = "38.86,-77.38"; // latitude and longitude
+    public static final String COORDINATES = "38.86,-77.38";
     public static final String LAT_LONG_PARAM = "&ll=";
 
     public static final String SORT_PARAM = "&sort=recent";
