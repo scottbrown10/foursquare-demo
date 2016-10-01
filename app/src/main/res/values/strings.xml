@@ -5,4 +5,8 @@
     <string name="get_locations_button_text">Get Nearby Locations</string>
     <string name="location_cell_tip_hint">No Tip Available</string>
     <string name="location_cell_name_hint">Somewhere</string>
+    <string name="location_enabled">Location service has been enabled</string>
+    <string name="prompt_for_internet">Please connect to the internet</string>
+    <string name="no_map_app">You have no app that can display this location</string>
+    <string name="location_not_satisfiable">Couldn\'t enable location</string>
 </resources>

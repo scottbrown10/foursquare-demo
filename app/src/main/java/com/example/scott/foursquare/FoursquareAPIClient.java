@@ -65,7 +65,7 @@ public class FoursquareAPIClient {
         mRequestQueue.add(jsonObjectRequest);
     }
 
-    public void getTip(final String name, final String locationID, final int index) {
+    public void getTip(final String locationID, final int index) {
         String url = Constants.VENUES_PATH + "/" + locationID + Constants.VENUES_TIPS +
                 Constants.PARAM_LIMIT + Constants.TIP_LIMIT;
 

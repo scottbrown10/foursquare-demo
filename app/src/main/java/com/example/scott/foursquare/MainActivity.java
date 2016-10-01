@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -45,6 +46,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity implements
         FoursquareAPIClient.FoursquareAPIListener,
+        TipAdapter.TipListener,
         View.OnClickListener,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
@@ -58,12 +60,13 @@ public class MainActivity extends AppCompatActivity implements
     private TipAdapter tipAdapter;
     private ArrayList<Tip> mTips;
 
-    private FoursquareAPIClient mFoursquareClient;
     private RelativeLayout mListLayout;
     private Button mButton;
 
     private GoogleApiClient googleApiClient;
     private LocationRequest mLocationRequest;
+
+    private FoursquareAPIClient mFoursquareClient;
 
     private String mCoordinates;
     private boolean mPermissionGranted = false;
@@ -72,35 +75,36 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        requestLocationPermission();
-        if (mPermissionGranted) {
-            setupLocationServices();
-        }
-
         setContentView(R.layout.activity_main);
-        RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.location_list);
-        mButton = (Button) findViewById(R.id.get_locations_button);
-        mListLayout = (RelativeLayout) findViewById(R.id.location_list_layout);
-
-        mRecyclerView.setHasFixedSize(true);
-
-        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
-        mRecyclerView.setLayoutManager(layoutManager);
-
         mTips = new ArrayList<>();
-        tipAdapter = new TipAdapter(mTips);
-        mRecyclerView.setAdapter(tipAdapter);
+        initViews();
 
         mFoursquareClient = FoursquareAPIClient.getInstance(this);
 
-        mButton.setVisibility(View.VISIBLE);
-        mListLayout.setVisibility(View.GONE);
-        mButton.setOnClickListener(this);
+        requestLocationPermission();
+        setupLocationServices();
+        if (mPermissionGranted) {
+            attemptGetNearbyLocations();
+        }
     }
 
+    private void requestLocationPermission() {
+        // check for permission at runtime on Android M or greater
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ActivityCompat.checkSelfPermission
+                    (this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions
+                        (this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
+            }
+        } else { // permission was granted at install time
+            mPermissionGranted = true;
+        }
+    }
+
+    /**
+     * Build Google API Client and LocationRequest object
+     */
     private void setupLocationServices() {
-        // create google client
         googleApiClient = new GoogleApiClient.Builder(this)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
@@ -108,12 +112,17 @@ public class MainActivity extends AppCompatActivity implements
                 .build();
         googleApiClient.connect();
 
-        // create location request
         mLocationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
                 .setInterval(1000 * 5)
                 .setFastestInterval(1000 * 3);
+    }
 
+    /**
+     * Check if location settings are enabled, then if user is connected to internet.
+     * If both are true, then invoke 4Square, else show prompt user to turn them on.
+     */
+    private void attemptGetNearbyLocations() {
         // create builder to check location settings
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
                 .addLocationRequest(mLocationRequest);
@@ -128,24 +137,54 @@ public class MainActivity extends AppCompatActivity implements
             public void onResult(@NonNull LocationSettingsResult locationSettingsResult) {
                 Status status = locationSettingsResult.getStatus();
                 switch (status.getStatusCode()) {
+
+                    // location settings satisfied
                     case LocationSettingsStatusCodes.SUCCESS:
-                        // locations settings satisfied
+                        if (isConnected()) {
+                            getNearbyLocations();
+                        } else {
+                            Toast.makeText(MainActivity.this, R.string.prompt_for_internet, Toast.LENGTH_SHORT).show();
+                        }
                         break;
+
+                    // location settings not satisfied, but satisfiable
+                    // show dialog to enable location settings
                     case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                        // location settings not satisfied, but satisfiable
-                        // show dialog to enable location settings
                         try {
                             status.startResolutionForResult(MainActivity.this, REQUEST_CHECK_SETTINGS);
                         } catch (IntentSender.SendIntentException e) {
-                            e.printStackTrace();
+                            Log.e(TAG, "onResult: " + e.getMessage());
                         }
                         break;
+
+                    // location settings not satisfied, but also unsatisfiable
                     case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                        // location settings not satisfied, but also unsatisfiable
+                        Toast.makeText(MainActivity.this, R.string.location_not_satisfiable, Toast.LENGTH_SHORT).show();
                         break;
                 }
             }
         });
+    }
+
+    /**
+     * Get the nearby locations and update the screen accordingly
+     */
+    private void getNearbyLocations() {
+        mTips.clear();
+        // try getting coordinates from location services. upon failure, use default
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+        if (mLastLocation != null) {
+            mCoordinates = (String.valueOf(mLastLocation.getLatitude() + "," + String.valueOf(mLastLocation.getLongitude())));
+            Log.d(TAG, "Got location: " + mCoordinates);
+        }
+        if (mCoordinates == null) {
+            mCoordinates = Constants.COORDINATES;
+            Log.d(TAG, "Use default location");
+        }
+        mFoursquareClient.getNearby(mCoordinates); // response is handled asynchronously
+
+        // TODO: 10/1/16 show a progress bar
+        mButton.setVisibility(View.GONE);
     }
 
     private void getTips() {
@@ -156,78 +195,61 @@ public class MainActivity extends AppCompatActivity implements
                 JSONObject location = mLocations.getJSONObject(i);
                 String name = location.getString("name");
                 String id = location.getString("id");
+                JSONObject j = location.getJSONObject("location").getJSONArray("labeledLatLngs").getJSONObject(0);
+                float lat = Float.parseFloat(j.getString("lat"));
+                float lng = Float.parseFloat(j.getString("lng"));
 
-                Tip tip = new Tip(name, null);
+                Tip tip = new Tip(name, null, lat, lng);
                 mTips.add(tip);
                 tipAdapter.notifyDataSetChanged();
-                mFoursquareClient.getTip(name, id, i);
+                mFoursquareClient.getTip(id, i); // response handled asynchronously
             } catch (JSONException e) {
-                e.printStackTrace();
+                Log.e(TAG, "getTips: " + e.getMessage());
             }
         }
     }
 
-    private boolean isConnected() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-        return (networkInfo != null && networkInfo.isConnected());
-    }
+    /* Foursquare listener overridden methods */
 
-    private void getNearbyLocations() {
-        mTips.clear();
-        // try getting coordinates from location services. if fails, use default
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
-        if (mLastLocation != null) {
-            mCoordinates = (String.valueOf(mLastLocation.getLatitude() + "," + String.valueOf(mLastLocation.getLongitude())));
-            Log.d(TAG, "Got location: " + mCoordinates);
+    @Override
+    public void onSearchResponse(JSONObject searchResponse) {
+        JSONArray locations = null;
+        try {
+            // extract needed attributes from response
+            locations = searchResponse.getJSONObject("response").getJSONArray("venues");
+        } catch (JSONException e) {
+            Log.e(TAG, "onSearchResponse: " + e.getMessage());
         }
-        if (mCoordinates == null) {
-            mCoordinates = Constants.COORDINATES;
-            Log.d(TAG, "Use default location");
-        }
-        mFoursquareClient.getNearby(mCoordinates);
+        mLocations = locations;
+        getTips();
 
-        mButton.setVisibility(View.GONE);
         mListLayout.setVisibility(View.VISIBLE);
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopLocationUpdates();
-    }
-
-    private void stopLocationUpdates() {
-        LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, this);
-    }
-
-    private void requestLocationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ActivityCompat.checkSelfPermission
-                    (this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions
-                        (this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
+    public void onTipResponse(JSONObject tipResponse, int index) {
+        try {
+            // extract needed attributes from response
+            JSONArray tips = tipResponse.getJSONObject("response").getJSONObject("tips").getJSONArray("items");
+            String body;
+            // TODO: 6/8/16 Perhaps get another location if no tips for this one
+            if (tips.length() != 0) {
+                JSONObject jsonTip = tips.getJSONObject(0);
+                body = jsonTip.getString("text");
+                mTips.get(index).setBody(body);
+                tipAdapter.notifyDataSetChanged();
             }
-        } else {
-            mPermissionGranted = true;
+
+        } catch (JSONException e) {
+            Log.e(TAG, "onTipResponse: " + e.getMessage());
         }
     }
 
-
-    // google api overridden methods
+    /* Google api overridden methods */
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-        /* don't request updates periodically. only do it on demand */
+        // don't request updates periodically. only do it on demand
         //startLocationUpdates();
-    }
-
-    private void startLocationUpdates() {
-        LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, mLocationRequest, this);
     }
 
     @Override
@@ -268,6 +290,7 @@ public class MainActivity extends AppCompatActivity implements
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             mPermissionGranted = true;
+            attemptGetNearbyLocations();
         } else { // user denied location access permission
             mCoordinates = Constants.COORDINATES;
         }
@@ -277,49 +300,69 @@ public class MainActivity extends AppCompatActivity implements
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CHECK_SETTINGS && resultCode == Activity.RESULT_OK) {
-            // location settings have been turned on
+            Toast.makeText(MainActivity.this,  R.string.location_enabled,Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     public void onClick(View v) {
-        if (isConnected()) {
-            getNearbyLocations();
+        attemptGetNearbyLocations();
+    }
+
+    /* Tip listener overridden methods */
+
+    @Override
+    public void onTipClicked(int pos) {
+        Tip tip = mTips.get(pos);
+        String uriString = "geo:" + tip.latitude + "," + tip.longitude;
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriString));
+
+        // check that the user has an app capable of displaying the location on a map
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            startActivity(intent);
         } else {
-            Toast.makeText(MainActivity.this, "No active internet connection", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.no_map_app, Toast.LENGTH_SHORT).show();
         }
     }
 
-    // foursquare listener overridden methods
-    @Override
-    public void onSearchResponse(JSONObject searchResponse) {
-        JSONArray locations = null;
-        try {
-            // extract needed attributes from response
-            locations = searchResponse.getJSONObject("response").getJSONArray("venues");
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        mLocations = locations;
-        getTips();
+    /* Utility methods */
+
+    /**
+     * Initialize everything related to views, including adapters and click listeners
+     */
+    private void initViews() {
+        RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.location_list);
+        mButton = (Button) findViewById(R.id.get_locations_button);
+        mListLayout = (RelativeLayout) findViewById(R.id.location_list_layout);
+
+        mRecyclerView.setHasFixedSize(true);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
+        mRecyclerView.setLayoutManager(layoutManager);
+
+        mButton.setVisibility(View.VISIBLE);
+        mListLayout.setVisibility(View.GONE);
+
+        mButton.setOnClickListener(this);
+        tipAdapter = new TipAdapter(mTips);
+        mRecyclerView.setAdapter(tipAdapter);
     }
 
-    @Override
-    public void onTipResponse(JSONObject tipResponse, int index) {
-        try {
-            // extract needed attributes from response
-            JSONArray tips = tipResponse.getJSONObject("response").getJSONObject("tips").getJSONArray("items");
-            String body;
-            // TODO: 6/8/16 Perhaps get another location if no tips for this one
-            if (tips.length() != 0) {
-                JSONObject jsonTip = tips.getJSONObject(0);
-                body = jsonTip.getString("text");
-                mTips.get(index).setBody(body);
-                tipAdapter.notifyDataSetChanged();
-            }
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+    /**
+     * Check if user is currently online
+     * @return True if user is connected to internet, else false
+     */
+    private boolean isConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+        return (networkInfo != null && networkInfo.isConnected());
     }
+
+/*    private void startLocationUpdates() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, mLocationRequest, this);
+    }
+
+    private void stopLocationUpdates() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, this);
+    }*/
+
 }
