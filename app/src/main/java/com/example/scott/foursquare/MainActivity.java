@@ -44,6 +44,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
+// TODO: 10/1/16 add button for users to retry location request
 public class MainActivity extends AppCompatActivity implements
         FoursquareAPIClient.FoursquareAPIListener,
         TipAdapter.TipListener,
@@ -69,7 +70,6 @@ public class MainActivity extends AppCompatActivity implements
     private FoursquareAPIClient mFoursquareClient;
 
     private String mCoordinates;
-    private boolean mPermissionGranted = false;
     private Location mLastLocation;
 
     @Override
@@ -83,21 +83,17 @@ public class MainActivity extends AppCompatActivity implements
 
         requestLocationPermission();
         setupLocationServices();
-        if (mPermissionGranted) {
-            attemptGetNearbyLocations();
-        }
     }
 
     private void requestLocationPermission() {
-        // check for permission at runtime on Android M or greater
+        // check for permission at runtime on Android >= M
+        // on Android < M, permission was granted at install time
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ActivityCompat.checkSelfPermission
                     (this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions
                         (this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
             }
-        } else { // permission was granted at install time
-            mPermissionGranted = true;
         }
     }
 
@@ -232,6 +228,7 @@ public class MainActivity extends AppCompatActivity implements
             // extract needed attributes from response
             JSONArray tips = tipResponse.getJSONObject("response").getJSONObject("tips").getJSONArray("items");
             String body;
+
             // TODO: 6/8/16 Perhaps get another location if no tips for this one
             if (tips.length() != 0) {
                 JSONObject jsonTip = tips.getJSONObject(0);
@@ -289,10 +286,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            mPermissionGranted = true;
             attemptGetNearbyLocations();
-        } else { // user denied location access permission
-            mCoordinates = Constants.COORDINATES;
         }
     }
 
@@ -314,10 +308,14 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onTipClicked(int pos) {
         Tip tip = mTips.get(pos);
-        String uriString = "geo:" + tip.latitude + "," + tip.longitude;
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriString));
 
-        // check that the user has an app capable of displaying the location on a map
+        // setup intent to show this location on map with pin and label
+        String latLong = "" + tip.latitude + "," + tip.longitude;
+        String uriString = "geo:0,0?q=" + latLong + "(" + tip.locationName + ")";
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(uriString));
+
+        // verify the user has an app capable of displaying the location on a map
         if (intent.resolveActivity(getPackageManager()) != null) {
             startActivity(intent);
         } else {
