@@ -22,6 +22,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.scott.foursquare.Adapters.TipAdapter;
@@ -61,8 +62,10 @@ public class MainActivity extends AppCompatActivity implements
     private TipAdapter tipAdapter;
     private ArrayList<Tip> mTips;
 
+    private RecyclerView mRecyclerView;
     private RelativeLayout mListLayout;
     private Button mButton;
+    private TextView mGetNearbyTV;
 
     private GoogleApiClient googleApiClient;
     private LocationRequest mLocationRequest;
@@ -166,7 +169,9 @@ public class MainActivity extends AppCompatActivity implements
      * Get the nearby locations and update the screen accordingly
      */
     private void getNearbyLocations() {
-        mTips.clear();
+        // TODO: 10/1/16 show a progress bar
+        mButton.setVisibility(View.GONE);
+//        mListLayout.setVisibility(View.VISIBLE);
         // try getting coordinates from location services. upon failure, use default
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
         if (mLastLocation != null) {
@@ -179,11 +184,10 @@ public class MainActivity extends AppCompatActivity implements
         }
         mFoursquareClient.getNearby(mCoordinates); // response is handled asynchronously
 
-        // TODO: 10/1/16 show a progress bar
-        mButton.setVisibility(View.GONE);
     }
 
     private void getTips() {
+        mTips.clear();
         int length = mLocations.length();
         for (int i = 0; i < length; i++) {
             try {
@@ -197,12 +201,12 @@ public class MainActivity extends AppCompatActivity implements
 
                 Tip tip = new Tip(name, null, lat, lng);
                 mTips.add(tip);
-                tipAdapter.notifyDataSetChanged();
                 mFoursquareClient.getTip(id, i); // response handled asynchronously
             } catch (JSONException e) {
                 Log.e(TAG, "getTips: " + e.getMessage());
             }
         }
+        tipAdapter.notifyDataSetChanged();
     }
 
     /* Foursquare listener overridden methods */
@@ -219,7 +223,6 @@ public class MainActivity extends AppCompatActivity implements
         mLocations = locations;
         getTips();
 
-        mListLayout.setVisibility(View.VISIBLE);
     }
 
     @Override
@@ -295,12 +298,18 @@ public class MainActivity extends AppCompatActivity implements
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CHECK_SETTINGS && resultCode == Activity.RESULT_OK) {
             Toast.makeText(MainActivity.this,  R.string.location_enabled,Toast.LENGTH_SHORT).show();
+            attemptGetNearbyLocations();
         }
     }
 
     @Override
     public void onClick(View v) {
-        attemptGetNearbyLocations();
+        switch (v.getId()) {
+            case R.id.get_locations_button:
+            case R.id.get_nearby_TV:
+                attemptGetNearbyLocations();
+                break;
+        }
     }
 
     /* Tip listener overridden methods */
@@ -329,18 +338,21 @@ public class MainActivity extends AppCompatActivity implements
      * Initialize everything related to views, including adapters and click listeners
      */
     private void initViews() {
-        RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.location_list);
+        mRecyclerView = (RecyclerView) findViewById(R.id.location_list);
         mButton = (Button) findViewById(R.id.get_locations_button);
         mListLayout = (RelativeLayout) findViewById(R.id.location_list_layout);
+        mGetNearbyTV = (TextView) findViewById(R.id.get_nearby_TV);
 
-        mRecyclerView.setHasFixedSize(true);
+        mRecyclerView.setHasFixedSize(false);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(layoutManager);
 
         mButton.setVisibility(View.VISIBLE);
-        mListLayout.setVisibility(View.GONE);
+        mListLayout.setVisibility(View.VISIBLE);
 
         mButton.setOnClickListener(this);
+        mGetNearbyTV.setOnClickListener(this);
+
         tipAdapter = new TipAdapter(mTips);
         mRecyclerView.setAdapter(tipAdapter);
     }
@@ -353,6 +365,11 @@ public class MainActivity extends AppCompatActivity implements
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = cm.getActiveNetworkInfo();
         return (networkInfo != null && networkInfo.isConnected());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
 /*    private void startLocationUpdates() {
